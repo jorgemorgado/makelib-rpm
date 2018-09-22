@@ -1,0 +1,6 @@
+# User alias specification
+User_Alias	U_RELEASE = root
+Cmnd_Alias	C_RELEASE = /usr/local/makelib/release
+
+# Members of U_RELEASE group may release packages without requiring a password
+U_RELEASE	ALL = NOPASSWD: C_RELEASE

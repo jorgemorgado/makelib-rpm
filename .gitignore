@@ -1,0 +1,7 @@
+*.swp
+*.swo
+*~
+.project
+*DS_STORE
+*.[0-9][0-9]
+.vscode
