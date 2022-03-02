@@ -1,0 +1,90 @@
+#!/bin/bash
+#
+# Release one or more RPM packages to a remote Yum repository.
+# v3.2 20150310, jorge (at) morgado (dot) ch
+# v4.0 20220301, jorge (at) morgado (dot) ch
+#
+# TODO
+# * Argument --debug not implemented
+#
+# Usage:
+#
+#   release_remote --help
+#
+
+# Read configuration
+. /etc/makelib.cfg
+
+function _usage() {
+    echo
+    echo "Usage: ${0} --reponame=<name> --rhel=<rhel>" 1>&2
+    echo 1>&2
+    echo "    reponame  Name of the repository to release the package" 1>&2
+    echo "    rhel      RHEL major version (e.g., 5, 6, 7, etc.)" 1>&2
+    exit 1
+}
+
+TEMP=$(getopt -o hvdsn:r: --long help,verbose,debug,nosudo,reponame:,rhel: \
+              -n "${0}" -- "$@")
+
+[ $? != 0 ] && _usage
+
+# Note the quotes around "$TEMP" -- they are essential!
+eval set -- "${TEMP}"
+
+VERBOSE=false
+DEBUG=false
+NOSUDO=false
+REPONAME=
+RHEL=
+RET=0
+
+while true; do
+    case "$1" in
+        -h | --help ) _usage; shift ;;
+        -v | --verbose ) VERBOSE=true; shift ;;
+        -d | --debug ) DEBUG=true; shift ;;
+        -s | --nosudo ) NOSUDO=true; shift ;;
+        -n | --reponame ) REPONAME="$2"; shift 2 ;;
+        -r | --rhel ) RHEL="$2"; shift 2 ;;
+        -- ) shift; break ;;
+        * ) break ;;
+    esac
+done
+
+# Temporary directory holding RPM packages
+TMPDIR="${TMPDIR}/makelib-$$$$"
+
+# The command to release the pacakge(s) on the remote host
+RELEASE_CMD="${BASEDIR}/release_local --tmpdir=\"${TMPDIR}\" --reponame=\"${REPONAME}\" --rhel=\"${RHEL}\""
+
+# Add sudo to the index repo command (if not false)
+[ "${NOSUDO}" == "false" ] && RELEASE_CMD="sudo ${RELEASE_CMD}"
+
+# Release the package on every repo host
+for HOST in ${REPOHOSTS}; do
+    ${VERBOSE} && echo "Releasing package to ${HOST}"
+    if ( ssh -q ${HOST} mkdir ${TMPDIR} ); then
+        if ( scp -q -r SRPMS RPMS ${HOST}:${TMPDIR} ); then
+            if ( ssh -q -tt ${HOST} "${RELEASE_CMD}" ); then
+                if ( ssh -q ${HOST} rm -rf "${TMPDIR}" ); then
+                    ${VERBOSE} && echo "Package(s) released on ${HOST}."
+                else
+                    ${VERBOSE} && echo "Error: removing ${HOST}:${TMPDIR}"
+                    RET=5
+                fi
+            else
+                echo "Error: executing ${HOST}:/usr/local/makelib/index_repo"
+                RET=4
+            fi
+        else
+            echo "Error: copying packages to ${HOST}:${TMPDIR}"
+            RET=3
+        fi
+    else
+        echo "Error: creating directory ${HOST}:${TMPDIR}"
+        RET=2
+    fi
+done
+
+exit ${RET}

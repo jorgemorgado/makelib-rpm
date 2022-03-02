@@ -3,7 +3,7 @@
 # Makefile: Red Hat/RPM package creation
 #
 # Written by Jorge Morgado jorge (at) morgado (dot) ch, February 2012
-# Copyright (c) 2012, Jorge Morgado
+# Copyright (c) 2012-2022, Jorge Morgado
 # All Rights Reserved.
 #
 # This program is free software: you can redistribute it and/or modify
@@ -23,7 +23,7 @@
 # This software provides a framework to automate RPM package creation.
 #
 # Targets:
-# 
+#
 #   all
 #   checkspec
 #   configure
@@ -86,17 +86,15 @@ SHELL        := /bin/bash
 BOLD         := \033[1m
 BOLDX        := \033[0m
 
-# find the name of the SPEC file; if not found, return /dev/null so the
-# next shell commands below (mostly grep) don't fail silently
+# find the name of the SPEC file; if not found, return no_spec_file_found so
+# the next shell commands below (mostly grep) fail early
 SPEC         := \
 	$(strip $(shell \
-	  pwd=`pwd`; \
-	  self=`basename $$pwd`; \
-	  file=`find install -name "$${self}.spec"`; \
+	  file=`find install -name "*.spec" | sort -r | head -1`; \
 	  if [ "$$file" ]; then \
 	    echo $$file; \
 	  else \
-	    echo /dev/null; \
+	    echo "no_spec_file_found"; \
 	  fi; ))
 
 SUMMARY      := $(strip $(shell grep -i ^SUMMARY: $(SPEC) | cut -d: -f2))
@@ -132,6 +130,9 @@ ARCHITECTURE := \
 
 # truncate the summary to max. 55 chars
 DESCSHORT    := $(shell echo '$(SUMMARY)' | cut -c1-55)
+
+# The default repo name where to release the package
+REPONAME?=_
 
 ################################################################################
 # Functions for the build target
@@ -282,21 +283,17 @@ post.build:
 	@printf "=== \`build' done ===\n"
 
 ################################################################################
-# The release target copies the built package to the Ubuntu repository
+# The release target copies the built package to the Yum repository
 ################################################################################
 .PHONY: release pre.release post.release
-release: check.sane pre.release post.release # publish package into repository
+release: check.sane pre.release post.release # publish package to repository (REPONAME=name for specific repo)
 
 pre.release:
 	@printf "=== target \`release' for $(SYS)-$(ARCHITECTURE) ===\n"
-	@if [ "$(REPOHOST)" ]; then \
-	   ssh -q $(REPOHOST) mkdir $(TMPDIR); \
-	   scp -q -r SRPMS RPMS $(REPOHOST):$(TMPDIR); \
-	   ssh -q -tt $(REPOHOST) sudo /usr/local/makelib/release "$(TMPDIR)" rhel $(RHEL_MAJOR); \
-	 else \
-	   printf "You need to define a REPOHOST to release the package(s)\n"; \
-	   exit 1; \
-	 fi;
+	@/usr/local/makelib/release_remote \
+	   --verbose \
+	   --reponame="$(REPONAME)" \
+	   --rhel="$(RHEL_MAJOR)"
 
 post.release:
 	@printf "distclean\n" > .target

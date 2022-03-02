@@ -1,0 +1,85 @@
+#!/bin/bash
+#
+# Release one or more RPM packages to a local Yum repository (and index it).
+# v1.0 20220301, jorge (at) morgado (dot) ch
+#
+# TODO
+# * Argument --debug not implemented
+#
+# Usage:
+#
+#   release_local --help
+#
+
+# Read configuration
+. /etc/makelib.cfg
+
+function _usage() {
+    echo "Transfer RPM package(s) from a temporary directory to the" 1>&2
+    echo "corresponding directory depending on the package extension." 1>&2
+    echo 1>&2
+    echo "Usage: ${0} --tmpdir=<directory> --reponame=<name> --rhel=<rhel>" 1>&2
+    echo 1>&2
+    echo "    tmpdir    Temporary directory with the package to release" 1>&2
+    echo "    reponame  Name of the repository to release the package" 1>&2
+    echo "    rhel      RHEL major version (e.g., 5, 6, 7, etc.)" 1>&2
+    exit 1
+}
+
+function _fatal()
+{
+    echo "Error: ${1}."
+    _usage
+    exit 1
+}
+
+TEMP=$(getopt -o hvdt:n:r: --long help,verbose,debug,tmpdir:,reponame:,rhel: \
+              -n "${0}" -- "$@")
+
+[ $? != 0 ] && _usage
+
+# Note the quotes around "$TEMP" -- they are essential!
+eval set -- "${TEMP}"
+
+VERBOSE=false
+DEBUG=false
+TMPDIR=
+REPONAME=
+RHEL=
+RET=0
+
+while true; do
+    case "$1" in
+        -h | --help ) _usage; shift ;;
+        -v | --verbose ) VERBOSE=true; shift ;;
+        -d | --debug ) DEBUG=true; shift ;;
+        -t | --tmpdir ) TMPDIR="$2"; shift 2 ;;
+        -n | --reponame ) REPONAME="$2"; shift 2 ;;
+        -r | --rhel ) RHEL="$2"; shift 2 ;;
+        -- ) shift; break ;;
+        * ) break ;;
+    esac
+done
+
+for RPMFILE in `find "${TMPDIR}" -name "*.rpm"`; do
+    # extract extension from file name
+    RPMFILE="${RPMFILE%*.rpm}"
+
+    # read architecture
+    ARCH="${RPMFILE##*.}"
+
+    case "${ARCH}" in
+        src)
+            cp "${RPMFILE}.rpm" "${REPO_BASEDIR}/${REPONAME}/${RHEL}/SRPMS/"
+            ;;
+        noarch | x86_64 | i386 )
+            cp "${RPMFILE}.rpm" "${REPO_BASEDIR}/${REPONAME}/${RHEL}/RPMS/"
+            ;;
+        *)
+            _fatal "Unknown RPM type (${ARCH})"
+    esac
+
+    ${BASEDIR}/index_repo --verbose --repodir="${REPO_BASEDIR}/${REPONAME}/${RHEL}"
+done
+
+exit ${RET}

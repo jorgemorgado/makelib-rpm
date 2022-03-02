@@ -5,10 +5,10 @@ Summary: Framework to build RPM packages.
 Name:    %{appname}
 Epoch:   1
 Version: 3.6
-Release: 1%{?dist}.yourtag
+Release: 1%{?dist}.scm
 License: GPLv2+
 Group:   Applications/Utils
-URL:     https://github.com/jorgemorgado/makelib-rpm
+URL:     http://www.morgado.ch/
 
 Source0: Makefile.rpm
 Source1: makelib.cfg
@@ -41,7 +41,7 @@ This package implements the release function for makelib 'release' target.
 %install
 %{__rm} -rf %{buildroot}
 %{__install} -m644 -D %{SOURCE0} %{buildroot}%{installdir}/Makefile.rpm
-%{__install} -m644 -D %{SOURCE1} %{buildroot}/etc/makelib.cfg
+%{__install} -m440 -D %{SOURCE1} %{buildroot}/etc/makelib.cfg
 %{__install} -m440 -D %{SOURCE2} %{buildroot}/etc/sudoers.d/makelib
 %{__install} -m755 -D %{SOURCE3} %{buildroot}%{installdir}/index_repo
 %{__install} -m755 -D %{SOURCE4} %{buildroot}%{installdir}/release_local
@@ -64,19 +64,19 @@ This package implements the release function for makelib 'release' target.
 %config(noreplace) /etc/sudoers.d/makelib
 
 %changelog
-* Wed Mar 2 2022 Jorge Morgado <jorge@morgado.ch> - 1:3.6-1
+* Wed Mar 2 2021 Jorge Morgado <jorge@morgado.ch> - 1:3.6-1
 - Add multiple release stages: remote, local, index repo
 - Add configuration file
 - Add support for different repository names
 
-* Mon Nov 27 2017 Fabien Hochstrasser - 1:3.4-1
+* Mon Nov 27 2017 Fabien Hochstrasser <fabien.hochstrasser@swisscom.com> - 1:3.4-1
 - Release to the same platform as the one where this script is running
 - Fix version parsing
 - Add more dependencies
 
 * Tue Mar 20 2012 Jorge Morgado <jorge@morgado.ch> - 1:2.0-1
-- Implement 'release' target.
-- Add sub-package makelib-release which includes only the release function.
+- Implemented 'release' target.
+- Added sub-package makelib-release which includes only the release function.
 
 * Tue Mar  6 2012 Jorge Morgado <jorge@morgado.ch> - 1:1.0-1
-- Initial release.
+- Initial release with support for RPM packages.

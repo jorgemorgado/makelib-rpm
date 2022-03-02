@@ -1,0 +1,64 @@
+#!/bin/bash
+#
+# Release one or more RPM packages to a local Yum repository (and index it).
+# v1.0 20220301, jorge (at) morgado (dot) ch
+#
+# TODO
+# * Argument --debug not implemented
+#
+# Usage:
+#
+#   index_repo --help
+#
+
+function _usage() {
+    echo "Index a repository directory." 1>&2; echo 1>&2
+    echo "Usage: ${0} --repodir=<directory>" 1>&2; echo 1>&2
+    echo "    repodir   Repository directory (excluding /RPMS prefix)" 1>&2
+    exit 1
+}
+
+function _fatal()
+{
+    echo "Error: ${1}."
+    _usage
+    exit 1
+}
+
+TEMP=$(getopt -o hvdr: --long help,verbose,debug,repodir: \
+              -n "${0}" -- "$@")
+
+[ $? != 0 ] && _usage
+
+# Note the quotes around "$TEMP" -- they are essential!
+eval set -- "${TEMP}"
+
+VERBOSE=false
+DEBUG=false
+REPODIR=
+RET=0
+
+while true; do
+    case "$1" in
+        -h | --help ) _usage; shift ;;
+        -v | --verbose ) VERBOSE=true; shift ;;
+        -d | --debug ) DEBUG=true; shift ;;
+        -r | --repodir ) REPODIR="$2"; shift 2 ;;
+        -- ) shift; break ;;
+        * ) break ;;
+    esac
+done
+
+if [ -d "${REPODIR}" ]; then
+    ${VERBOSE} && echo "Indexing repository ${REPODIR}..."
+    cd "${REPODIR}"
+    createrepo "${REPODIR}/RPMS"
+
+    ${VERBOSE} && echo "Setting permissions and SELinux..."
+    chmod -R o-w+r "${REPODIR}"
+    chcon -R unconfined_u:object_r:public_content_t:s0 "${REPODIR}"
+else
+    _fatal "repository directory not found (${REPODIR})"
+fi
+
+exit ${RET}
