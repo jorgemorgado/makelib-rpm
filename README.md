@@ -10,7 +10,7 @@ You can use the makelib-rpm to build its own RPM package. Although, for this
 to work, you need to manually copy the `sources/Makefile` into the right place.
 Example:
 
-```
+```bash
 # Clone this repository
 git clone https://github.com/jorgemorgado/makelib-rpm
 
@@ -38,7 +38,7 @@ targets are available:
 * compile
 * install
 * build
-* release
+* release [REPONAME=name]
 * clean
 * distclean
 * everything
@@ -49,9 +49,23 @@ actions can be included in the `./Makefile` from the targets `configure` to
 
 ## Package release
 
-The `release` target is a special case that typically requires the `release`
-script and sudo file to be installed on your repository server. The repository
+The `release` target is a special case that typically requires the release
+scripts and sudo file to be installed on your repository server. The repository
 server must then be defined in the `./Makefile` (see `REPOHOST`).
+
+A package can be released to a specific repository using the `REPONAME` option (default `REPONAME` is `_`):
+
+```bash
+make release REPONAME=name
+```
+
+Tipically you should install the `makelib` package on your build host, and the `makelib-release` package on your repository host. The release target will then work as follows:
+
+```code
++----------- Build host ---------- | --------- Repo host ----------+
+| make release --> release_remote --> release_local --> index_repo |
++------------------------------------------------------------------+
+```
 
 ## License
 
